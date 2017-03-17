@@ -1,0 +1,13 @@
+﻿Build started 3/17/2017 9:13:00 PM.
+     1>Project "C:\Users\Tom\Documents\GitHub\FractalColour2D\FractalColour2D\FractalColour2D.vcxproj" on node 2 (Build target(s)).
+     1>Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\Tom\Documents\GitHub\FractalColour2D\Debug\FractalColour2D.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\Tom\Documents\GitHub\FractalColour2D\Debug\FractalColour2D.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\Tom\Documents\GitHub\FractalColour2D\Debug\FractalColour2D.lib" /MACHINE:X86 Debug\bmp.obj
+         Debug\fractalColour2D.obj
+         Debug\spectrumToRGB.obj
+         Debug\stdafx.obj
+         FractalColour2D.vcxproj -> C:\Users\Tom\Documents\GitHub\FractalColour2D\Debug\FractalColour2D.exe
+     1>Done Building Project "C:\Users\Tom\Documents\GitHub\FractalColour2D\FractalColour2D\FractalColour2D.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:00.74

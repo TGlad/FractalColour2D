@@ -145,7 +145,7 @@ int _tmain(int argc, _TCHAR* argv[])
       if (visible[i])
         ps3.push_back(ps[i]);
  
-    int numAngles = 10;// 20; // integration over all incident light angles in 180 degree sky
+    int numAngles = 20; // integration over all incident light angles in 180 degree sky
     Vector3d pixels[numRows][width];
     memset(pixels, 0, sizeof(Vector3d)*numRows*width);
     for (int iAngle = 0; iAngle < numAngles; iAngle++)

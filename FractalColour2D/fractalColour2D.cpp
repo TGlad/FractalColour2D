@@ -68,14 +68,17 @@ int _tmain(int argc, _TCHAR* argv[])
   int maxRots = 60;
   for (int rot = 0; rot < maxRots; rot++) // one per view angle in the gif
   {
-    double bigCurveAngle = 0.03 + 60.0 * (pi / 180.0) * (double)rot / (double)maxRots; // 0 to 60 degrees is sufficient as the snowflake has hexagonal symmetry
+    double bigCurveAngle = 0.02 + 60.0 * (pi / 180.0) * (double)rot / (double)maxRots; // 0 to 60 degrees is sufficient as the snowflake has hexagonal symmetry
+//    double sinx = 2.0*pi * (double)rot / (double)maxRots;
+//    double sint = sin(sinx);
+//    double bigCurveAngle = 0.02 + (sint + sint*sint*sint/3.0)/1.6; // 0 to 60 degrees is sufficient as the snowflake has hexagonal symmetry
     vector<BYTE> out(totalWidth*height * 3); // .bmp pixel buffer
     memset(&out[0], 255, out.size() * sizeof(BYTE)); // background is white
     int d = 0;
     {
     lift = 0.5*tan(30.0 * pi / 180.0); // lift is the height of the mid point when the width is unit length. This is the correct lift for the Koch snowflake
-    Vector2d a(-0.5, -lift);
-    Vector2d b(0.5, -lift);
+    Vector2d a(-0.5, -lift); //, 0);
+    Vector2d b(0.5, -lift); //, 0); // for non-koch curves
     Vector2d c(0, 0.5 / sin(60.0 * pi / 180.0));
     double cosa = cos(bigCurveAngle);
     double sina = -sin(bigCurveAngle);
@@ -145,7 +148,7 @@ int _tmain(int argc, _TCHAR* argv[])
       if (visible[i])
         ps3.push_back(ps[i]);
  
-    int numAngles = 20; // integration over all incident light angles in 180 degree sky
+    int numAngles = 50; // integration over all incident light angles in 180 degree sky
     Vector3d pixels[numRows][width];
     memset(pixels, 0, sizeof(Vector3d)*numRows*width);
     for (int iAngle = 0; iAngle < numAngles; iAngle++)
@@ -214,10 +217,8 @@ int _tmain(int argc, _TCHAR* argv[])
         int diff = indexEnd - indexStart;
         for (int i = 0; i < (int)ps3.size(); i++)
           vs2[i] = ps3[i] * (double)diff / (double)width; // scale the curve
-        int numColours = 10; // colour spectrum resolution (number of frequency samples to use)
-        vector<double> freqs(numColours); 
-        for (int i = 0; i < numColours; i++)
-          freqs[i] = 1.0 + 0.7*(double)i / (double)(numColours - 1); // linear ramp in frequency from 1 to 1.7 (times frequency of red light)
+        const int numColours = 7; // colour spectrum resolution (number of frequency samples to use)
+        double freqs[numColours] = {1.0, 1.125, 1.25, 1.375, 1.5, 1.625, 1.75};
         for (int index = indexStart; index < indexEnd; index++) // for each pixel along the row
         {
           double x = -0.5 + (double)index / (double)(width - 1);
@@ -229,7 +230,7 @@ int _tmain(int argc, _TCHAR* argv[])
           for (int i = 0; i < numColours; i++)
             vals[i] = Vector2d(0, 0); 
           int i;
-          double offset = (freqs.back() / (double)width); // max spot size radius
+          double offset = (freqs[numColours-1] / (double)width); // max spot size radius
           // if we want to grow spot size with s then...
           //        double offset = (1.0 + 7.0*((double)s / (double)numRows)) * 0.5*(freqs[2] / (double)width);
           int count = 0;
@@ -240,7 +241,7 @@ int _tmain(int argc, _TCHAR* argv[])
             totalWeight[j] = 1e-10; // nonzero to avoid a division by 0 later
 
           //        double scale = 0.5*pi * (double)width * (1.0 + 10.0*(double)s / (double)numRows);
-          double scale = 0.5*pi * (double)width * 5.0; // controls how many wavelengths you get in the spot size (this doesn't affect the colour much, unless too low).
+          double scale = 0.5*pi * (double)width * 4.0; // controls how many wavelengths you get in the spot size (this doesn't affect the colour much, unless too low).
           ////        double scale = 0.5*pi * (double)width * 2.0;
           for (; vs2[i][0] < x + offset && i < (int)vs2.size() - 1; i++) // for all vertices within the spot size
           {
@@ -250,7 +251,9 @@ int _tmain(int argc, _TCHAR* argv[])
             {
               double freq = scale * freqs[j];
               // just a parabolic weighting to diminish intensity on ends of spot. Note that this makes the spot width grow with light wavelength (though results are similar without this)
-              double weight = max(0.0, 1.0 - sqr((vs2[i][0] - x) * freqs[j] / offset)); 
+//              double weight = max(0.0, 1.0 - sqr((vs2[i][0] - x) * freqs[j] / offset));
+              // square weighting guarantees 0 intensity on straight edge
+              double weight = abs(vs2[i][0] - x) < (offset / freqs[j]) ? 1.0 : 0.0;
               totalWeight[j] += weight;
               if (!shadowed[i])
                 vals[j] += weight * Vector2d(sin(depth*freq), cos(depth*freq)); // here's the complex number part
@@ -259,9 +262,15 @@ int _tmain(int argc, _TCHAR* argv[])
           }
           avgcount += count;
           Vector3d rgb(0, 0, 0);
-          for (int j = 0; j < numColours; j++)
-            rgb += wavelengthToRGB(690.0 / freqs[j]) *vals[j].norm() / totalWeight[j];
-          rgb *= 3.0/(double)numColours; // make it brighter
+          rgb += vals[0].norm() * Vector3d(0.5, 0, 0) / totalWeight[0];
+          rgb += vals[1].norm() * Vector3d(1, 0, 0) / totalWeight[1];
+          rgb += vals[2].norm() * Vector3d(0.5, 0.5, 0) / totalWeight[2];
+          rgb += vals[3].norm() * Vector3d(0, 1, 0) / totalWeight[3];
+          rgb += vals[4].norm() * Vector3d(0, 0.5, 0.5) / totalWeight[4];
+          rgb += vals[5].norm() * Vector3d(0, 0, 1) / totalWeight[5];
+          rgb += vals[6].norm() * Vector3d(0, 0, 0.5) / totalWeight[6];
+          
+          rgb *= 5.0/(double)numColours; // make it brighter
           if (numAngles >= 10)
           {
             rgb *= 6.0; // and again

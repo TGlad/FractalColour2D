@@ -4,21 +4,94 @@
 #include "spectrumToRGB.h"
 
 static double lift;
-static int type = 1; // 0: Levy, 1: Koch, 2: Dragon, 3: random
+static int type = 6; // -1: koch snowflake, 0: Levy, 1: Koch curve, 2: Dragon, 3: random, 4: 2.5D blocks, 5: word fractal, 6: Vicsek fractal 
 void addKochChild(vector<Vector2d> &ps, int order, const Vector2d &p02, const Vector2d &p12, bool flip = false)
 {
+  if (order < 0)
+    return;
   const Vector2d p0 = p02;
   const Vector2d p1 = p12;
   Vector2d dir(p1[1] - p0[1], p0[0] - p1[0]);
-  if (flip)
+  if (flip && type != 6)
     dir = -dir;
+  if (type == 6)
+  {
+    Vector2d across = (p1 - p0) / 3.0;
+    Vector2d p0b, p0c, p0d, p0e;
+    if (!flip)
+    {
+      p0b = p0 + across;
+      p0c = p0b + across*0.999; // to keep occlusions ok
+      p0d = p0b + across + dir / 3.0;
+      p0e = p1 - across*0.999;
+    }
+    else
+    {
+      p0b = p0 + across*0.999;
+      p0c = p0 + across + dir/3.0; 
+      p0d = p0 + across*1.001;
+      p0e = p1 - across;
+    }
+    addKochChild(ps, order - 1, p0, p0b, flip);
+    ps.push_back(p0b);
+    addKochChild(ps, order - 1, p0b, p0c, !flip);
+    ps.push_back(p0c);
+    addKochChild(ps, order - 1, p0c, p0d, flip);
+    ps.push_back(p0d);
+    addKochChild(ps, order - 1, p0d, p0e, !flip);
+    ps.push_back(p0e);
+    addKochChild(ps, order - 1, p0e, p1, flip);
+    return;
+  }
+  else if (type == 4 || type == 5)
+  {
+    Vector2d across = (p1 - p0)*0.25;
+    Vector2d p0b = p0 + across;
+    Vector2d p0h = p1 - across;
+    Vector2d p0c, p0d, p0e, p0f, p0g;
+    bool swap;
+    if (type == 4)
+    {
+      p0c = p0b + dir*0.25;
+      p0d = p0c + dir*0.25;
+      p0e = p0 + (p1 - p0)*0.5 + dir*0.5;
+      p0g = p0h + dir*0.25;
+      p0f = p0g + dir*0.25;
+      swap = !flip;
+    }
+    else
+    {
+      p0c = p0b + dir*0.25;
+      p0d = p0c + across;
+      p0e = p0 + 2 * across;
+      p0g = p0h - dir*0.25;
+      p0f = p0g - across;
+      swap = flip;
+    }
+    addKochChild(ps, order - 1, p0, p0b, flip);
+    ps.push_back(p0b);
+    addKochChild(ps, order - 1, p0b, p0c, swap);
+    ps.push_back(p0c);
+    addKochChild(ps, order - 1, p0c, p0d, flip);
+    ps.push_back(p0d);
+    addKochChild(ps, order - 1, p0d, p0e, flip);
+    ps.push_back(p0e);
+    addKochChild(ps, order - 1, p0e, p0f, flip);
+    ps.push_back(p0f);
+    addKochChild(ps, order - 1, p0f, p0g, flip);
+    ps.push_back(p0g);
+    addKochChild(ps, order - 1, p0g, p0h, swap);
+    ps.push_back(p0h);
+    addKochChild(ps, order - 1, p0h, p1, flip);
+    return;
+  }
   if (type == 3)
     dir *= ((double)(rand() % 1000)) / 500.0 - 1.0;
   Vector2d mid = (p0 + p1)*0.5 + dir * lift;
   bool f1, f2;
   if (type == 0)
     f1 = f2 = flip;
-  else if (type == 1)
+  else if (type == 1 || type == -1)
     f1 = f2 = !flip;
   else if (type == 2)
   {
@@ -26,11 +99,9 @@ void addKochChild(vector<Vector2d> &ps, int order, const Vector2d &p02, const Ve
   }
   else
     f1 = f2 = true;
-  if (order > 0)
-    addKochChild(ps, order - 1, p0, mid, f1);
+  addKochChild(ps, order - 1, p0, mid, f1);
   ps.push_back(mid);
-  if (order > 0)
-    addKochChild(ps, order - 1, mid, p1, f2);
+  addKochChild(ps, order - 1, mid, p1, f2);
 }
 
 struct Bit
@@ -46,7 +117,7 @@ bool lessThanBit(const Bit &a, const Bit &b)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-  int order = 12; // iteration depth of fractal curve
+  int order = (type == 4 || type == 5)? 3 : (type == 6 ? 4 : 12); // iteration depth of fractal curve. Should lead to about 60 points per pixel
   bool flip = false; // false: curve bends towards camera, true: concave, curve bends away
 
 #define DOKOCH // animation of spinning Koch snowflake
@@ -65,20 +136,27 @@ int _tmain(int argc, _TCHAR* argv[])
   long s2;
 #if defined(DOKOCH)
   int height = numRows;
-  int maxRots = 60;
+  int maxRots = 70;
   for (int rot = 0; rot < maxRots; rot++) // one per view angle in the gif
   {
-    double bigCurveAngle = 0.02 + 60.0 * (pi / 180.0) * (double)rot / (double)maxRots; // 0 to 60 degrees is sufficient as the snowflake has hexagonal symmetry
-//    double sinx = 2.0*pi * (double)rot / (double)maxRots;
-//    double sint = sin(sinx);
-//    double bigCurveAngle = 0.02 + (sint + sint*sint*sint/3.0)/1.6; // 0 to 60 degrees is sufficient as the snowflake has hexagonal symmetry
+    double bigCurveAngle;
+    if (type == -1) // continuous rotation
+      bigCurveAngle = 0.02 + 60.0 * (pi / 180.0) * (double)rot / (double)maxRots; // 0 to 60 degrees is sufficient as the snowflake has hexagonal symmetry
+    else
+    {
+      double sinx = 2.0*pi * (double)rot / (double)maxRots;
+      double sint = sin(sinx);
+      bigCurveAngle = 0.02 + (sint + sint*sint*sint / 3.0) / 1.75; // 0 to 60 degrees is sufficient as the snowflake has hexagonal symmetry
+    }
     vector<BYTE> out(totalWidth*height * 3); // .bmp pixel buffer
     memset(&out[0], 255, out.size() * sizeof(BYTE)); // background is white
     int d = 0;
     {
     lift = 0.5*tan(30.0 * pi / 180.0); // lift is the height of the mid point when the width is unit length. This is the correct lift for the Koch snowflake
-    Vector2d a(-0.5, -lift); //, 0);
-    Vector2d b(0.5, -lift); //, 0); // for non-koch curves
+    Vector2d a(-0.5, 0);
+    Vector2d b(0.5, 0);
+    if (type == -1)
+      a[1] = b[1] = -lift; // bring forward for Koch snowflake
     Vector2d c(0, 0.5 / sin(60.0 * pi / 180.0));
     double cosa = cos(bigCurveAngle);
     double sina = -sin(bigCurveAngle);
@@ -87,9 +165,12 @@ int _tmain(int argc, _TCHAR* argv[])
     Vector2d p2(b[0] * cosa - b[1] * sina, b[0] * sina + b[1] * cosa);
     addKochChild(ps, order + 2, ps[0], p2, flip); // recursive function creates the first edge of the snowflake
     ps.push_back(p2);
-    Vector2d p3(c[0] * cosa - c[1] * sina, c[0] * sina + c[1] * cosa);
-    addKochChild(ps, order + 2, ps.back(), p3, flip); // creates the second edge of the snowflake (we only need two for this animation)
-    ps.push_back(p3);
+    if (type == -1)
+    {
+      Vector2d p3(c[0] * cosa - c[1] * sina, c[0] * sina + c[1] * cosa);
+      addKochChild(ps, order + 2, ps.back(), p3, flip); // creates the second edge of the snowflake (we only need two for this animation)
+      ps.push_back(p3);
+    }
 #else
   int height = numDimensions * (numRows + gap);
   double bigCurveAngle = 0.0; // look at these curves head-on
@@ -148,7 +229,7 @@ int _tmain(int argc, _TCHAR* argv[])
       if (visible[i])
         ps3.push_back(ps[i]);
  
-    int numAngles = 50; // integration over all incident light angles in 180 degree sky
+    int numAngles = 20; // integration over all incident light angles in 180 degree sky
     Vector3d pixels[numRows][width];
     memset(pixels, 0, sizeof(Vector3d)*numRows*width);
     for (int iAngle = 0; iAngle < numAngles; iAngle++)
@@ -219,7 +300,7 @@ int _tmain(int argc, _TCHAR* argv[])
           vs2[i] = ps3[i] * (double)diff / (double)width; // scale the curve
         const int numColours = 7; // colour spectrum resolution (number of frequency samples to use)
         double freqs[numColours] = {1.0, 1.125, 1.25, 1.375, 1.5, 1.625, 1.75};
-        for (int index = indexStart; index < indexEnd; index++) // for each pixel along the row
+        for (int index = 0; index < width; index++) // for each pixel along the row
         {
           double x = -0.5 + (double)index / (double)(width - 1);
           while (vs2[ind][0] < x && ind < (int)vs2.size() - 1) // find vertex closest to pixel centre
@@ -254,6 +335,7 @@ int _tmain(int argc, _TCHAR* argv[])
 //              double weight = max(0.0, 1.0 - sqr((vs2[i][0] - x) * freqs[j] / offset));
               // square weighting guarantees 0 intensity on straight edge
               double weight = abs(vs2[i][0] - x) < (offset / freqs[j]) ? 1.0 : 0.0;
+              weight *= vs2[min(i + 1, (int)vs2.size() - 1)][0] - vs2[max(0, i - 1)][0];
               totalWeight[j] += weight;
               if (!shadowed[i])
                 vals[j] += weight * Vector2d(sin(depth*freq), cos(depth*freq)); // here's the complex number part
@@ -261,7 +343,8 @@ int _tmain(int argc, _TCHAR* argv[])
             count++;
           }
           avgcount += count;
-          Vector3d rgb(0, 0, 0);
+          double col = count ? 1e-10 : 0;
+          Vector3d rgb(col,col,col);
           rgb += vals[0].norm() * Vector3d(0.5, 0, 0) / totalWeight[0];
           rgb += vals[1].norm() * Vector3d(1, 0, 0) / totalWeight[1];
           rgb += vals[2].norm() * Vector3d(0.5, 0.5, 0) / totalWeight[2];
@@ -273,14 +356,15 @@ int _tmain(int argc, _TCHAR* argv[])
           rgb *= 5.0/(double)numColours; // make it brighter
           if (numAngles >= 10)
           {
-            rgb *= 6.0; // and again
-      /*      if (iAngle == numAngles / 6) // if we want an additional point light source in the sky
+            rgb *= 5.0;// 3.0;// 5.0; // and again
+   /*         if (iAngle == numAngles / 6) // if we want an additional point light source in the sky
             {
               double sunStrength = 8.0;
               rgb *= sunStrength; 
             }*/
           }
-          pixels[s][index] += rgb;
+          if (count > 0)
+            pixels[s][index] += Vector3d(max(1e-8, rgb[0]), max(1e-8, rgb[1]), max(1e-8, rgb[2]));
         }
 #if !defined(DOKOCH) // this just shows average colour down the right hand side
         int inde = ((d*(numRows + gap) + s)*totalWidth + width + 1) * 3;
@@ -320,7 +404,7 @@ int _tmain(int argc, _TCHAR* argv[])
 #if defined(DOKOCH)
   BYTE* c = ConvertRGBToBMPBuffer(&out[0], totalWidth, height, &s2);
   wstringstream str;
-  str << L"kochs/koch" << rot << L".bmp";
+  str << L"vicsek/vicsek" << rot << L".bmp";
   wstring strng = str.str();
   const TCHAR * bll = strng.c_str();
   LPCTSTR file = bll;

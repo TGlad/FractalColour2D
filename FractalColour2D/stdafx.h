@@ -26,3 +26,7 @@ inline double sqr(double x)
 {
   return x*x;
 }
+inline double random(double from, double to)
+{
+  return from + (to - from)*(rand() % 10000) / 10000.0;
+}

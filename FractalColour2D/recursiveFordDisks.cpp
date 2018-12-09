@@ -29,7 +29,7 @@ int _tmain(int argc, _TCHAR* argv[])
       p[1] = ((double)y) / (double)height;
       double dScale = 1.0;
       double ratio = 2.0/3.0;
-      for (int i = 0; i < 1; i++)
+      for (int i = 0; i < 2; i++)
       {
         if ((p - Vector2d(0, 0.5)).norm() > 0.5)
           if (i == 0 || p[1] > 0.5)
@@ -44,16 +44,16 @@ int _tmain(int argc, _TCHAR* argv[])
           double s = 1.0 / ((1.0 / ratio) - 1.0);
           p *= s;
           p[1] = 1.0 - p[1];
-          p[0] = fmod(100 + p[0] + 0.5, 1.0) - 0.5;
         }
         else 
         {
-          p[0] = abs(p[0]);
-          p[0] -= 1.0;
           p /= p.squaredNorm();
-          p[0] += 1.0;
-          p[0] = fmod(100 + p[0] + 0.5, 1.0) - 0.5;
+//          p[0] = abs(p[0]);
+//          p[0] -= 1.0;
+//          p /= p.squaredNorm();
+//          p[0] += 1.0;
         }
+        p[0] = fmod(100 + p[0] + 0.5, 1.0) - 0.5;
       }
       if ((p - Vector2d(0, 0.5)).norm() < 0.5)
         putpixel(out, Vector2i(x, y), 0);
@@ -61,7 +61,7 @@ int _tmain(int argc, _TCHAR* argv[])
   }
 
   BYTE* c = ConvertRGBToBMPBuffer(&out[0], width, height, &s2);
-  LPCTSTR file = L"recursiveFordDisks1.bmp";
+  LPCTSTR file = L"recursiveFordDisks2.bmp";
   SaveBMP(c, width, height, s2, file);
   delete[] c;
 }

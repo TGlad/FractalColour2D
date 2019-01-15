@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "bmp.h"
 #include <fstream>
-static double gradient = 0.15;// 0.0001;// 0.15;
+static double gradient = 0.0001;
 struct Node
 {
   Vector2d pos, peak;
@@ -18,13 +18,14 @@ public:
 double scale = 750.0;
 Vector2d offset(0.55, 0);
 static vector<Vector2d> leaves;
-static double minLength = 0.01;
-
+static double minLength = 0.001;
+static double area = 0.0;
 void Node::draw(ofstream &svg, const Vector2d &origin, const Vector2d &xAx, const Vector2d &yAx)
 {
   Vector2d start = origin + xAx*pos[0] + yAx*pos[1];
   Vector2d x = xAx*xAxis[0] + yAx*xAxis[1];
   Vector2d y = xAx*yAxis[0] + yAx*yAxis[1];
+  area += length * (width + width2) / 2.0 + abs(width2*peak[1] / 2.0);
 
   Vector2d corners[] = { start - x*width*0.5, start + x*width*0.5, start + x*0.5*width2 + y*length, start + x*peak[0] + y*(peak[1] + length), start - x*0.5*width2 + y*length };
   double gscale = 0.9*scale;
@@ -71,8 +72,7 @@ void saveSVG(const string &fileName, Node &tree)
   svg << "</svg>" << endl;
   svg.close();
 }
-static const double cantorScale = 0.3333;
-#define CLASSIFICATION
+
 void Node::split()
 {
   if (length <= minLength)
@@ -81,24 +81,18 @@ void Node::split()
   }
   Node child1, child2;
 
-#if defined CLASSIFICATION
-  double scale = 1.0 / exp(1.5*log(2.0));
-#endif
-  double areaLoss = (sqr(width) - sqr(width2)) * cantorScale;
-  double c = sqrt((sqr(width)+sqr(width2)+areaLoss)/2.0);
-  double a = sqrt(areaLoss);
-  double b = sqrt(sqr(c) - areaLoss);
-  double theta = atan2(a, b);
-  Vector2d p(c*0.5 - b*cos(theta), b*sin(theta));
+  double scale = 5.0 / 12.0;
+
+  double c = width * scale * sqrt(2.0);
+  double a = width * scale;
+  double b = width * scale;
+  Vector2d p(0, c/2.0);
   Vector2d B(-c/2.0, 0);
   Vector2d A(c/2.0, 0);
   Vector2d fromB = p-B;
   Vector2d fromA = p-A;
-#if defined CLASSIFICATION
-  length *= scale;
-#else
-  length *= 0.5;
-#endif
+  double newLength = length * scale;
+
 
   child1.pos = B + 0.5*fromB;
   child1.yAxis = Vector2d(-fromB[1], fromB[0]);
@@ -108,7 +102,7 @@ void Node::split()
     child1.xAxis.normalize();
   if (child1.yAxis.norm() > 0)
     child1.yAxis.normalize();
-  child1.length = length;
+  child1.length = newLength;
   child1.width = a;
   child1.width2 = 0;
   child1.dir = -dir; // remove negation for curly
@@ -122,7 +116,7 @@ void Node::split()
     child2.xAxis.normalize();
   if (child2.yAxis.norm()>0)
     child2.yAxis.normalize();
-  child2.length = length;
+  child2.length = newLength;
   child2.width = b;
   child2.width2 = width2;
   child2.children = children;
@@ -148,22 +142,13 @@ int _tmain(int argc, _TCHAR* argv[])
   Node base;
   base.xAxis = Vector2d(1, 0);
   base.yAxis = Vector2d(0, 1);
-#if defined CLASSIFICATION
-  base.length = 2.0;
-#else
-  base.length = 1.05;
-#endif
-  base.width = base.length * gradient; //  / rawLength;// *gradient;
+  base.length = 0.45;
+  base.width = base.length * gradient; 
   base.width2 = 0;
   base.pos = Vector2d(0, 0);
   base.dir = 1.0;
 
   base.split();
-#if defined CLASSIFICATION
-  saveSVG("simpletree_classification.svg", base);
-  saveSVGLeaves("simpletree_leaves_classification.svg");
-#else
-  saveSVG("simpletree.svg", base);
-  saveSVGLeaves("simpletree_leaves.svg");
-#endif
+  cout << base.length << endl;
+  saveSVG("multiplicationrule1.svg", base);
 }

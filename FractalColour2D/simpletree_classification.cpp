@@ -18,14 +18,13 @@ public:
 double scale = 750.0;
 Vector2d offset(0.55, 0);
 static vector<Vector2d> leaves;
-static double minLength = 0.001;
-static double area = 0.0;
+static double minLength = 0.01;
+
 void Node::draw(ofstream &svg, const Vector2d &origin, const Vector2d &xAx, const Vector2d &yAx)
 {
   Vector2d start = origin + xAx*pos[0] + yAx*pos[1];
   Vector2d x = xAx*xAxis[0] + yAx*xAxis[1];
   Vector2d y = xAx*yAxis[0] + yAx*yAxis[1];
-  area += length * (width + width2) / 2.0 + abs(width2*peak[1] / 2.0);
 
   Vector2d corners[] = { start - x*width*0.5, start + x*width*0.5, start + x*0.5*width2 + y*length, start + x*peak[0] + y*(peak[1] + length), start - x*0.5*width2 + y*length };
   double gscale = 0.9*scale;
@@ -83,18 +82,20 @@ void Node::split()
   Node child1, child2;
 
 #if defined CLASSIFICATION
-  double scale = 1.0 / exp(log(2.0) * 4.0/3.0);
+  double scale = 1.0 / exp(1.5*log(2.0));
 #endif
-  double c = width * scale * sqrt(2.0);
-  double a = width * scale;
-  double b = width * scale;
-  Vector2d p(0, c/2.0);
+  double areaLoss = (sqr(width) - sqr(width2)) * cantorScale;
+  double c = sqrt((sqr(width)+sqr(width2)+areaLoss)/2.0);
+  double a = sqrt(areaLoss);
+  double b = sqrt(sqr(c) - areaLoss);
+  double theta = atan2(a, b);
+  Vector2d p(c*0.5 - b*cos(theta), b*sin(theta));
   Vector2d B(-c/2.0, 0);
   Vector2d A(c/2.0, 0);
   Vector2d fromB = p-B;
   Vector2d fromA = p-A;
 #if defined CLASSIFICATION
-  double newLength = length * scale;
+  length *= scale;
 #else
   length *= 0.5;
 #endif
@@ -107,7 +108,7 @@ void Node::split()
     child1.xAxis.normalize();
   if (child1.yAxis.norm() > 0)
     child1.yAxis.normalize();
-  child1.length = newLength;
+  child1.length = length;
   child1.width = a;
   child1.width2 = 0;
   child1.dir = -dir; // remove negation for curly
@@ -121,7 +122,7 @@ void Node::split()
     child2.xAxis.normalize();
   if (child2.yAxis.norm()>0)
     child2.yAxis.normalize();
-  child2.length = newLength;
+  child2.length = length;
   child2.width = b;
   child2.width2 = width2;
   child2.children = children;
@@ -148,7 +149,7 @@ int _tmain(int argc, _TCHAR* argv[])
   base.xAxis = Vector2d(1, 0);
   base.yAxis = Vector2d(0, 1);
 #if defined CLASSIFICATION
-  base.length = 0.5;
+  base.length = 2.0;
 #else
   base.length = 1.05;
 #endif
@@ -160,7 +161,6 @@ int _tmain(int argc, _TCHAR* argv[])
   base.split();
 #if defined CLASSIFICATION
   saveSVG("simpletree_classification.svg", base);
-  cout << "total area: " << area << endl;
   saveSVGLeaves("simpletree_leaves_classification.svg");
 #else
   saveSVG("simpletree.svg", base);

@@ -51,6 +51,32 @@ void saveSVG(const string &fileName, vector<Square> &squares)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+  double d = 0.0;
+  double scale = 2.0;
+  double length = 0.0;
+  double numSegments = 1.0;
+  for (int i = 0; i < 20; i++)
+  {
+    double s = (scale + sqrt(sqr(scale) + d*d - 1.0)) / (d + 1.0);
+    d = (s*s*(d + 1.0) + d - 1.0) / (s*s*(d + 1.0) + 1.0 - d);
+    numSegments *= 2.0;
+    if (i > 0)
+    {
+      double newLength = d / numSegments;
+      double h = sqrt(sqr(newLength) - sqr(length / 2.0));
+      double curvature = h / sqr(length / 2.0);
+      cout << "i: " << i << ", d: " << d << ", curv: " << curvature << endl;
+
+ //     double r = 1.0 / (2.0*sqrt(3.0));
+ //     double h1 = r - sqrt(r*r - sqr(length/2.0));
+ //     cout << "h1: " << h << ", h2: " << h1 << endl;
+    }
+    else
+      cout << "i: " << i << ", d: " << d << endl;
+    length = d / numSegments;
+  }
+
+  exit(1);
   vector<Square> squares;
   int layer = 0;
   int nums = 8;

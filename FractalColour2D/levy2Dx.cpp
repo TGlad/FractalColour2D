@@ -16,7 +16,7 @@ using namespace Eigen;
 #include <windows.h>
 #include <stdio.h>       // for memset
 static ofstream svg;
-double scale = 800.0;
+double scale = 1600.0;
 void openSVG(const string &fileName)
 {
   svg.open(fileName.c_str());
@@ -29,8 +29,8 @@ void saveSVG(const Vector2d &offset, const vector<Vector3d> &points)
   svg << "<path d = \"M " << scale*(s*points[0][2] + offset[1]) << " " << scale*(1.0 - s*points[0][1] - offset[0]);
   for (int i = 1; i < (int)points.size(); i++)
     svg << " L " << scale*(s*points[i][2] + offset[1]) << " " << scale*(1.0 - s*points[i][1] - offset[0]);
-  string cols[] = { "blue", "red", "grey", "orange", "purple" };
-  svg << "\" fill=\"transparent\" stroke=\"" << cols[icount++] << "\" />\n";
+  string cols[] = { "blue", "red", "grey", "orange", "orange", "orange" };
+  svg << "\" fill=\"none\" stroke-width=\"2\" stroke=\"" << cols[icount++] << "\" />\n";
 }
 
 void closeSVG()
@@ -48,34 +48,11 @@ static double angle = 1.2;
 static double dimension = 0.0;
 void addKochChild(int order, const Vector3d &p0, const Vector3d &p1, bool flip = false)
 {
-  double time0 = pow(2.0, 1.0 - dimension);
-  // time0 = half/angle + half*angle
-  // time0 = roothalf*u.dot(dt,dist)/angle + roothalf*v.dot(dt,dist)*angle
-  //       = 
-  // roothalf*v.dot(dt,dist)*angle^2 - time0*angle + roothalf*u.dot(dt,dist) = 0
   Vector3d dir = p1 - p0;
   double dt = dir[0];
   Vector3d dirn = dir;
   dirn[0] = 0;
   double dist = dirn.norm();
-  Vector3d proj(dt, dist, 0);
-  
-  
-  double a = roothalf*v.dot(proj);
-  double b = -time0*dt;
-  double c = roothalf*u.dot(proj);
-  double b24ac = b*b - 4.0*a*c;
-  angle = (-b + sqrt(b24ac)) / (2.0*a);
-  
-  Vector3d proja = u*u.dot(proj) / angle + v*v.dot(proj)*angle;
-  double downScale = dt / proja[0];
-  double len = proja[1] * downScale;
-  if (len < dist)
-    cout << "bad" << endl;
-  double lift = 0.5*sqrt(len*len - dist*dist);
-
-
-
 
   Vector3d orth(0.0, -dir[2], dir[1]);
   if (dist == 0)
@@ -84,7 +61,10 @@ void addKochChild(int order, const Vector3d &p0, const Vector3d &p1, bool flip =
     orth.normalize();
   if (flip)
     orth = -orth;
-  Vector3d mid = p0 + dirn*0.5 + orth*lift + Vector3d(0.5*proja[0]*downScale, 0, 0);
+  double s = dist / dt;
+  double k = downScale;
+  double lift = (dt / 2.0)*sqrt((1.0 - k*k)*(1.0-s*s));
+  Vector3d mid = p0 + dirn*0.5 + orth*lift + Vector3d(dt/2.0, 0, 0);
 
   if (order > 0)
     addKochChild(order - 1, p0, mid, flip);
@@ -94,10 +74,10 @@ void addKochChild(int order, const Vector3d &p0, const Vector3d &p1, bool flip =
 }
 int _tmain(int argc, _TCHAR* argv[])
 {
-  openSVG("levy2D2.svg");
-  double dims[] = { 0.99, 0.95, 0.75, 0.5, 0 };
+  openSVG("levy2Dx.svg");
+  double dims[] = { 0.75, 0.5, 0, -1 };
 //  double dims[] = { 0.99, 0.95, 0.9, 0.8 };
-  for (int d = 0; d < 5; d++)
+  for (int d = 0; d < 4; d++)
   {
     dimension = dims[d]; //  0.75 - 0.25*(double)d;
     double time0 = pow(2.0, 1.0 - dimension);
